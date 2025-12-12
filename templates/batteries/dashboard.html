@@ -433,6 +433,14 @@
         </div>
 
         <!-- Alerts Section -->
+        <!-- Live updates -->
+        <div class="alert-container" style="margin-bottom: 20px;">
+            <div class="alert-title">🔔 Live Updates</div>
+            <div id="live-updates" style="max-height: 160px; overflow-y: auto; padding-top: 10px;">
+                <p style="color:#999; padding:10px;">No live updates yet</p>
+            </div>
+        </div>
+
         <div class="alert-container" style="margin-bottom: 30px;">
             <div class="alert-title">🚨 Recent Unresolved Alerts</div>
             <div id="alerts-list" style="max-height: 400px; overflow-y: auto;">
@@ -694,6 +702,72 @@
 
         // Auto-refresh every 30 seconds
         setInterval(loadDashboard, 30000);
+
+        // WebSocket live updates
+        (function initWebSocket(){
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsUrl = `${protocol}://${window.location.host}/ws/dashboard/`;
+            let socket;
+
+            function connect() {
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = () => {
+                    console.log('WebSocket connected:', wsUrl);
+                    const live = document.getElementById('live-updates');
+                    if (live) live.innerHTML = '<p style="color:#2ecc71; padding:10px;">WebSocket connected</p>';
+                };
+
+                socket.onmessage = (event) => {
+                    try {
+                        const payload = JSON.parse(event.data);
+                        handleLivePayload(payload);
+                    } catch (err) {
+                        console.warn('WS message non-json', event.data);
+                    }
+                };
+
+                socket.onclose = () => {
+                    console.log('WebSocket closed, reconnecting in 2s...');
+                    setTimeout(connect, 2000);
+                };
+
+                socket.onerror = (err) => {
+                    console.error('WebSocket error', err);
+                    socket.close();
+                };
+            }
+
+            function handleLivePayload(payload){
+                const live = document.getElementById('live-updates');
+                if (!live) return;
+                // Create item
+                const item = document.createElement('div');
+                item.className = 'alert-item info';
+                item.style.marginBottom = '8px';
+                const title = payload.type || 'update';
+                let message = '';
+                if (payload.battery) message = `Battery ${payload.battery.serial_number} updated (charge: ${payload.battery.current_charge}%)`;
+                else if (payload.alert) message = `${payload.alert.alert_type}: ${payload.alert.message}`;
+                else message = JSON.stringify(payload).slice(0, 200);
+
+                item.innerHTML = `<div class="alert-content"><div class="alert-battery">${title}</div><div class="alert-message">${message}</div></div>`;
+                // prepend
+                if (live.firstChild && live.firstChild.tagName === 'P' && live.firstChild.textContent.includes('No live updates yet')) {
+                    live.innerHTML = '';
+                }
+                live.insertBefore(item, live.firstChild);
+                // keep only 10 items
+                while (live.children.length > 10) live.removeChild(live.lastChild);
+
+                // Refresh dashboard summaries for immediate consistency
+                if (payload.type === 'battery_update' || payload.type === 'alert_update') {
+                    loadDashboard();
+                }
+            }
+
+            connect();
+        })();
     </script>
 </body>
 </html>
