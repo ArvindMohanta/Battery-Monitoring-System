@@ -1,0 +1,699 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Management Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #667eea;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-unit {
+            color: #999;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+
+        .stat-card.critical {
+            border-left-color: #e74c3c;
+        }
+
+        .stat-card.warning {
+            border-left-color: #f39c12;
+        }
+
+        .stat-card.success {
+            border-left-color: #27ae60;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+
+        .alert-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-title {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .alert-item {
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-item.critical {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+
+        .alert-item.error {
+            border-left-color: #e67e22;
+            background: #fdebd0;
+        }
+
+        .alert-item.warning {
+            border-left-color: #f39c12;
+            background: #fef5e7;
+        }
+
+        .alert-item.info {
+            border-left-color: #3498db;
+            background: #d6eaf8;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-battery {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .alert-message {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .alert-type {
+            display: inline-block;
+            padding: 5px 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #333;
+            margin-left: 10px;
+        }
+
+        .battery-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .battery-table thead {
+            background: #667eea;
+            color: white;
+        }
+
+        .battery-table th,
+        .battery-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .battery-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .status-charging {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-discharging {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .status-idle {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-fault {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+
+        .progress-fill.low {
+            background: linear-gradient(90deg, #e74c3c, #c0392b);
+        }
+
+        .progress-fill.medium {
+            background: linear-gradient(90deg, #f39c12, #e67e22);
+        }
+
+        .progress-fill.high {
+            background: linear-gradient(90deg, #27ae60, #229954);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #764ba2;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-card {
+                min-width: 150px;
+            }
+
+            .battery-table th,
+            .battery-table td {
+                padding: 10px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔋 Battery Management Dashboard</h1>
+            <p>Real-time monitoring and analysis of battery health and performance</p>
+            <div style="margin-top: 15px;">
+                <a href="/" style="color: #667eea; text-decoration: none; margin-right: 20px;">← Home</a>
+                <a href="/admin/" style="color: #667eea; text-decoration: none; margin-right: 20px;">Admin Panel</a>
+                <a href="/api/" style="color: #667eea; text-decoration: none;">API</a>
+            </div>
+            <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Data</button>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card success">
+                <div class="stat-label">Total Batteries</div>
+                <div class="stat-value"><span id="total-batteries">0</span></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Active Batteries</div>
+                <div class="stat-value"><span id="active-batteries">0</span></div>
+            </div>
+
+            <div class="stat-card critical">
+                <div class="stat-label">Faulty Batteries</div>
+                <div class="stat-value"><span id="faulty-batteries">0</span></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Avg Health</div>
+                <div class="stat-value"><span id="avg-health">0</span><span class="stat-unit">%</span></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Avg Charge</div>
+                <div class="stat-value"><span id="avg-charge">0</span><span class="stat-unit">%</span></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Avg Temperature</div>
+                <div class="stat-value"><span id="avg-temp">0</span><span class="stat-unit">°C</span></div>
+            </div>
+
+            <div class="stat-card critical">
+                <div class="stat-label">Unresolved Alerts</div>
+                <div class="stat-value"><span id="unresolved-alerts">0</span></div>
+            </div>
+
+            <div class="stat-card critical">
+                <div class="stat-label">Critical Alerts</div>
+                <div class="stat-value"><span id="critical-alerts">0</span></div>
+            </div>
+
+            <div class="stat-card success">
+                <div class="stat-label">Total Devices</div>
+                <div class="stat-value"><span id="total-devices">0</span></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-container">
+                <div class="chart-title">Battery Status Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Battery Health Ranges</div>
+                <div class="chart-wrapper">
+                    <canvas id="healthChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Charge Level Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="chargeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Battery Types</div>
+                <div class="chart-wrapper">
+                    <canvas id="typeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Cycle Count Distribution</div>
+                <div class="chart-wrapper">
+                    <canvas id="cycleChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-title">Alert Types Breakdown</div>
+                <div class="chart-wrapper">
+                    <canvas id="alertTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alert-container" style="margin-bottom: 30px;">
+            <div class="alert-title">🚨 Recent Unresolved Alerts</div>
+            <div id="alerts-list" style="max-height: 400px; overflow-y: auto;">
+                <p class="loading">Loading alerts...</p>
+            </div>
+        </div>
+
+        <!-- Batteries Table -->
+        <div style="margin-bottom: 30px;">
+            <h2 style="color: white; margin-bottom: 20px;">📊 Battery Details</h2>
+            <div style="overflow-x: auto;">
+                <table class="battery-table">
+                    <thead>
+                        <tr>
+                            <th>Serial Number</th>
+                            <th>Type</th>
+                            <th>Charge</th>
+                            <th>Voltage</th>
+                            <th>Temperature</th>
+                            <th>Status</th>
+                            <th>Health</th>
+                            <th>Cycles</th>
+                        </tr>
+                    </thead>
+                    <tbody id="batteries-table-body">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px;">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusChart, healthChart, chargeChart, typeChart, cycleChart, alertTypeChart;
+
+        async function loadDashboard() {
+            try {
+                // Load stats
+                const statsRes = await fetch('/api/dashboard/stats/');
+                const stats = await statsRes.json();
+                updateStats(stats);
+
+                // Load chart data
+                const chartDataRes = await fetch('/api/dashboard/chart-data/');
+                const chartData = await chartDataRes.json();
+                updateCharts(chartData);
+
+                // Load battery details
+                const batteryRes = await fetch('/api/dashboard/battery-details/');
+                const batteryData = await batteryRes.json();
+                updateBatteryTable(batteryData.batteries);
+
+                // Load alerts
+                const alertRes = await fetch('/api/dashboard/alerts/');
+                const alertData = await alertRes.json();
+                updateAlerts(alertData);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function updateStats(stats) {
+            document.getElementById('total-batteries').textContent = stats.batteries.total;
+            document.getElementById('active-batteries').textContent = stats.batteries.active;
+            document.getElementById('faulty-batteries').textContent = stats.batteries.faulty;
+            document.getElementById('avg-health').textContent = stats.health.average;
+            document.getElementById('avg-charge').textContent = stats.charge.average;
+            document.getElementById('avg-temp').textContent = stats.temperature.average;
+            document.getElementById('unresolved-alerts').textContent = stats.alerts.unresolved;
+            document.getElementById('critical-alerts').textContent = stats.alerts.critical;
+            document.getElementById('total-devices').textContent = stats.devices.total;
+        }
+
+        function updateCharts(data) {
+            // Status Chart
+            const statusCtx = document.getElementById('statusChart').getContext('2d');
+            if (statusChart) statusChart.destroy();
+            statusChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: data.status.map(s => s.current_status),
+                    datasets: [{
+                        data: data.status.map(s => s.count),
+                        backgroundColor: ['#27ae60', '#3498db', '#95a5a6', '#e74c3c']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Health Chart
+            const healthCtx = document.getElementById('healthChart').getContext('2d');
+            if (healthChart) healthChart.destroy();
+            healthChart = new Chart(healthCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.health_ranges),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(data.health_ranges),
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Charge Chart
+            const chargeCtx = document.getElementById('chargeChart').getContext('2d');
+            if (chargeChart) chargeChart.destroy();
+            chargeChart = new Chart(chargeCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.charge_ranges),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(data.charge_ranges),
+                        backgroundColor: '#764ba2'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Type Chart
+            const typeCtx = document.getElementById('typeChart').getContext('2d');
+            if (typeChart) typeChart.destroy();
+            typeChart = new Chart(typeCtx, {
+                type: 'pie',
+                data: {
+                    labels: data.types.map(t => t.battery_type),
+                    datasets: [{
+                        data: data.types.map(t => t.count),
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            // Cycle Chart
+            const cycleCtx = document.getElementById('cycleChart').getContext('2d');
+            if (cycleChart) cycleChart.destroy();
+            cycleChart = new Chart(cycleCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data.cycle_ranges),
+                    datasets: [{
+                        label: 'Count',
+                        data: Object.values(data.cycle_ranges),
+                        backgroundColor: '#f39c12'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Alert Type Chart
+            const alertCtx = document.getElementById('alertTypeChart').getContext('2d');
+            if (alertTypeChart) alertTypeChart.destroy();
+            alertTypeChart = new Chart(alertCtx, {
+                type: 'bar',
+                data: {
+                    labels: data.alert_types.map(a => a.alert_type).slice(0, 6),
+                    datasets: [{
+                        label: 'Count',
+                        data: data.alert_types.map(a => a.count).slice(0, 6),
+                        backgroundColor: '#e74c3c'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateBatteryTable(batteries) {
+            const tbody = document.getElementById('batteries-table-body');
+            if (batteries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">No batteries found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = batteries.map(b => `
+                <tr>
+                    <td><strong>${b.serial_number}</strong></td>
+                    <td>${b.battery_type}</td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${b.current_charge > 70 ? 'high' : b.current_charge > 30 ? 'medium' : 'low'}" 
+                                 style="width: ${b.current_charge}%">
+                                ${b.current_charge.toFixed(1)}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${b.current_voltage.toFixed(2)}V</td>
+                    <td>${b.current_temperature.toFixed(1)}°C</td>
+                    <td>
+                        <span class="status-badge status-${b.current_status.toLowerCase()}">
+                            ${b.current_status}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${b.health_percentage > 70 ? 'high' : b.health_percentage > 50 ? 'medium' : 'low'}" 
+                                 style="width: ${b.health_percentage}%">
+                                ${b.health_percentage.toFixed(1)}%
+                            </div>
+                        </div>
+                    </td>
+                    <td>${b.cycle_count}</td>
+                </tr>
+            `).join('');
+        }
+
+        function updateAlerts(data) {
+            const alertsList = document.getElementById('alerts-list');
+            if (data.recent_unresolved.length === 0) {
+                alertsList.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">No unresolved alerts</p>';
+                return;
+            }
+
+            alertsList.innerHTML = data.recent_unresolved.map(alert => `
+                <div class="alert-item ${alert.alert_level.toLowerCase()}">
+                    <div class="alert-content">
+                        <div class="alert-battery">${alert.battery__serial_number}</div>
+                        <div class="alert-message">${alert.message}</div>
+                    </div>
+                    <span class="alert-type">${alert.alert_type}</span>
+                </div>
+            `).join('');
+        }
+
+        function refreshDashboard() {
+            loadDashboard();
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>
