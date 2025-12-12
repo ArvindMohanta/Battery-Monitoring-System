@@ -335,6 +335,7 @@
                 <a href="/" style="color: #667eea; text-decoration: none; margin-right: 20px;">← Home</a>
                 <a href="/admin/" style="color: #667eea; text-decoration: none; margin-right: 20px;">Admin Panel</a>
                 <a href="/api/" style="color: #667eea; text-decoration: none;">API</a>
+                <span id="ws-status" style="float:right; margin-left:20px; padding:6px 10px; border-radius:12px; background:#f1f1f1; color:#333; font-weight:600;">WS: Disconnected</span>
             </div>
             <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Data</button>
         </div>
@@ -716,6 +717,8 @@
                     console.log('WebSocket connected:', wsUrl);
                     const live = document.getElementById('live-updates');
                     if (live) live.innerHTML = '<p style="color:#2ecc71; padding:10px;">WebSocket connected</p>';
+                    const s = document.getElementById('ws-status');
+                    if (s) { s.textContent = 'WS: Connected'; s.style.background = '#27ae60'; s.style.color = '#fff'; }
                 };
 
                 socket.onmessage = (event) => {
@@ -729,11 +732,15 @@
 
                 socket.onclose = () => {
                     console.log('WebSocket closed, reconnecting in 2s...');
+                    const s = document.getElementById('ws-status');
+                    if (s) { s.textContent = 'WS: Disconnected'; s.style.background = '#f1f1f1'; s.style.color = '#333'; }
                     setTimeout(connect, 2000);
                 };
 
                 socket.onerror = (err) => {
                     console.error('WebSocket error', err);
+                    const s = document.getElementById('ws-status');
+                    if (s) { s.textContent = 'WS: Error'; s.style.background = '#e74c3c'; s.style.color = '#fff'; }
                     socket.close();
                 };
             }
